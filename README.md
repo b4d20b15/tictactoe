@@ -4,7 +4,6 @@
   <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge" alt="Status">
   <img src="https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JS">
   <img src="https://img.shields.io/badge/Multiplayer-WebRTC%20(PeerJS)-00f0ff?style=for-the-badge" alt="WebRTC">
-  <img src="https://img.shields.io/badge/Style-Glassmorphism-ff3366?style=for-the-badge" alt="Design">
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License">
 </p>
 
