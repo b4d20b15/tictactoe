@@ -23,50 +23,100 @@ const state = {
 };
 
 // ==========================================
-// ДИНАМІЧНІ СТИЛІ (Верстка, Символ трикутника для ШІ)
+// ДИНАМІЧНІ СТИЛІ (Верстка, 4 картки та ШІ)
 // ==========================================
 const customStyleTag = document.createElement('style');
-customStyleTag.id = 'pro-game-multiplayer-styles';
+customStyleTag.id = 'pro-game-clean-styles';
 customStyleTag.textContent = `
   .controls-bar {
     display: flex !important;
     flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .modes-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    background: var(--card-bg, rgba(255, 255, 255, 0.04)) !important;
+    border: 1px solid var(--card-border, rgba(255, 255, 255, 0.07)) !important;
+    padding: 6px !important;
+    border-radius: var(--radius-sm, 12px) !important;
+  }
+
+  .mode-btn {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-muted) !important;
+    padding: 10px 8px !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: var(--transition) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+  }
+
+  .mode-btn.active {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .sub-controls-row {
+    display: flex !important;
+    align-items: center !important;
     gap: 8px !important;
     width: 100% !important;
   }
-  .controls-row {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 6px !important;
-    width: 100% !important;
-  }
-  .mode-selector {
-    flex: 1 !important;
-    display: flex !important;
-    overflow-x: auto !important;
-  }
-  .mode-btn {
-    flex: 1 !important;
-    padding: 7px 5px !important;
-    font-size: 0.75rem !important;
-    white-space: nowrap !important;
-    text-align: center !important;
-  }
+
   .select-difficulty {
     flex: 1 !important;
-    padding: 7px 8px !important;
-    font-size: 0.82rem !important;
+    padding: 9px 10px !important;
+    font-size: 0.85rem !important;
     min-width: 0 !important;
-  }
-  .icon-btn {
-    width: 36px !important;
-    height: 36px !important;
-    flex-shrink: 0 !important;
-    padding: 0 !important;
+    border-radius: var(--radius-sm, 10px) !important;
   }
 
-  /* Символ ШІ в режимі Тріо (Неоновий золотий трикутник ▲) */
+  .icon-btn {
+    width: 40px !important;
+    height: 40px !important;
+    flex-shrink: 0 !important;
+    border-radius: var(--radius-sm, 10px) !important;
+  }
+
+  /* Адаптивна сітка для 4 карток рахунку в режимі 2 + ШІ */
+  .score-board.four-cards {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px !important;
+  }
+  .score-board.four-cards .score-card {
+    padding: 8px 4px !important;
+  }
+  .score-board.four-cards .player-label {
+    font-size: 0.68rem !important;
+    white-space: nowrap !important;
+  }
+  .score-board.four-cards .score-num {
+    font-size: 1.15rem !important;
+  }
+
+  /* Символ і картка ШІ для режиму Тріо (▲) */
+  .score-card.player-ai .player-icon {
+    color: #f59e0b !important;
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
+  }
+  .score-card.active-glow.player-ai {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.45) !important;
+  }
   .symbol-ai polygon {
     stroke: #f59e0b;
     stroke-width: 9;
@@ -76,15 +126,6 @@ customStyleTag.textContent = `
     stroke-dasharray: 260;
     stroke-dashoffset: 260;
     animation: drawStroke 0.45s cubic-bezier(0.65, 0, 0.35, 1) forwards;
-  }
-  .score-card.player-ai .player-icon {
-    color: #f59e0b;
-    font-size: 1.2rem;
-    font-weight: 800;
-  }
-  .score-card.active-glow.player-ai {
-    border-color: #f59e0b;
-    box-shadow: 0 0 16px rgba(245, 158, 11, 0.45);
   }
   .win-line.ai-win {
     background: #f59e0b;
@@ -102,7 +143,7 @@ customStyleTag.textContent = `
     z-index: 5 !important;
   }
 
-  /* Модальне вікно онлайн */
+  /* Модальне вікно онлайн гри */
   .online-dialog {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(13, 17, 23, 0.85); backdrop-filter: blur(12px);
@@ -127,6 +168,7 @@ document.head.appendChild(customStyleTag);
 const boardEl = document.getElementById('board');
 let cells = document.querySelectorAll('.cell');
 const winLineEl = document.getElementById('winLine');
+const scoreBoardEl = document.querySelector('.score-board');
 const cardX = document.getElementById('cardX');
 const cardTie = document.getElementById('cardTie');
 const scoreXEl = document.getElementById('scoreX');
@@ -146,91 +188,100 @@ const modalNextBtn = document.getElementById('modalNextBtn');
 const confettiCanvas = document.getElementById('confettiCanvas');
 const ctx = confettiCanvas ? confettiCanvas.getContext('2d') : null;
 
-// Динамічна картка гравця O
+// Картка гравця O
 let cardO = document.getElementById('cardO');
-if (!cardO) {
-  const scoreBoard = document.querySelector('.score-board');
-  if (scoreBoard) {
-    cardO = document.createElement('div');
-    cardO.className = 'score-card player-o';
-    cardO.id = 'cardO';
-    cardO.innerHTML = `
-      <span class="player-icon">◯</span>
-      <div class="score-info">
-        <span class="player-label" id="labelO">Гравець O</span>
-        <span class="score-num" id="scoreO">0</span>
-      </div>
-    `;
-    if (cardTie) scoreBoard.insertBefore(cardO, cardTie);
-    else scoreBoard.appendChild(cardO);
-  }
+if (!cardO && scoreBoardEl) {
+  cardO = document.createElement('div');
+  cardO.className = 'score-card player-o';
+  cardO.id = 'cardO';
+  cardO.innerHTML = `
+    <span class="player-icon">◯</span>
+    <div class="score-info">
+      <span class="player-label" id="labelO">Гравець O</span>
+      <span class="score-num" id="scoreO">0</span>
+    </div>
+  `;
+  if (cardTie) scoreBoardEl.insertBefore(cardO, cardTie);
+  else scoreBoardEl.appendChild(cardO);
 }
 const scoreOEl = document.getElementById('scoreO');
 const labelOEl = document.getElementById('labelO');
 
+// Створюємо окрему 4-ту картку для ШІ (▲), щоб не чіпати «🤝 Нічиї»
+let cardAI = document.getElementById('cardAI');
+if (!cardAI && scoreBoardEl) {
+  cardAI = document.createElement('div');
+  cardAI.className = 'score-card player-ai';
+  cardAI.id = 'cardAI';
+  cardAI.innerHTML = `
+    <span class="player-icon">▲</span>
+    <div class="score-info">
+      <span class="player-label" id="labelAI">ШІ (▲)</span>
+      <span class="score-num" id="scoreAI">0</span>
+    </div>
+  `;
+  if (cardTie) scoreBoardEl.insertBefore(cardAI, cardTie);
+  else scoreBoardEl.appendChild(cardAI);
+}
+const scoreAIEl = document.getElementById('scoreAI');
+const labelAIEl = document.getElementById('labelAI');
+
 // ==========================================
-// ПАНЕЛЬ КЕРУВАННЯ ТА РЕЖИМИ
+// ПЕРЕБУДОВА ПАНЕЛІ КЕРУВАННЯ
 // ==========================================
 const controlsBar = document.querySelector('.controls-bar');
-const modeSelector = document.querySelector('.mode-selector');
+const modesGrid = document.createElement('div');
+modesGrid.className = 'modes-grid';
 
-// Додаємо кнопку "2 + ШІ"
+modePvpBtn.textContent = '👥 2 Гравці';
+modeAiBtn.textContent = '🤖 Проти ШІ';
+
 const modeTrioBtn = document.createElement('button');
 modeTrioBtn.id = 'modeTrio';
 modeTrioBtn.className = 'mode-btn active';
 modeTrioBtn.title = '2 Гравці проти ШІ (Бій на трьох)';
 modeTrioBtn.textContent = '⚔️ 2 + ШІ';
 
-// Додаємо кнопку Онлайн
 const modeOnlineBtn = document.createElement('button');
 modeOnlineBtn.id = 'modeOnline';
 modeOnlineBtn.className = 'mode-btn';
 modeOnlineBtn.title = 'Грати онлайн по коду кімнати з другом';
 modeOnlineBtn.textContent = '🌐 Онлайн';
 
-if (modeSelector) {
-  modeSelector.innerHTML = '';
-  modeSelector.appendChild(modePvpBtn);
-  modeSelector.appendChild(modeAiBtn);
-  modeSelector.appendChild(modeTrioBtn);
-  modeSelector.appendChild(modeOnlineBtn);
-}
+modesGrid.appendChild(modePvpBtn);
+modesGrid.appendChild(modeAiBtn);
+modesGrid.appendChild(modeTrioBtn);
+modesGrid.appendChild(modeOnlineBtn);
 
-// Селектор розміру поля
+const subControlsRow = document.createElement('div');
+subControlsRow.className = 'sub-controls-row';
+
 const boardSizeSelect = document.createElement('select');
 boardSizeSelect.id = 'boardSizeSelect';
 boardSizeSelect.className = 'select-difficulty';
 boardSizeSelect.innerHTML = `
-  <option value="3" selected>3×3</option>
-  <option value="4">4×4</option>
+  <option value="3" selected>Поле 3×3</option>
+  <option value="4">Поле 4×4</option>
 `;
 
-// Кнопка підказки
 const hintBtn = document.createElement('button');
 hintBtn.id = 'hintBtn';
 hintBtn.className = 'icon-btn';
-hintBtn.title = 'Отримати підказку ходу';
+hintBtn.title = 'Отримати підказку кращого ходу';
 hintBtn.textContent = '💡';
 
-const controlsRowTop = document.createElement('div');
-controlsRowTop.className = 'controls-row';
-const controlsRowBottom = document.createElement('div');
-controlsRowBottom.className = 'controls-row';
+subControlsRow.appendChild(boardSizeSelect);
+subControlsRow.appendChild(aiDifficultySelect);
+subControlsRow.appendChild(hintBtn);
+subControlsRow.appendChild(soundToggleBtn);
 
-if (controlsBar && modeSelector) {
+if (controlsBar) {
   controlsBar.innerHTML = '';
-  controlsRowTop.appendChild(modeSelector);
-  controlsRowTop.appendChild(boardSizeSelect);
-
-  controlsRowBottom.appendChild(aiDifficultySelect);
-  controlsRowBottom.appendChild(hintBtn);
-  controlsRowBottom.appendChild(soundToggleBtn);
-
-  controlsBar.appendChild(controlsRowTop);
-  controlsBar.appendChild(controlsRowBottom);
+  controlsBar.appendChild(modesGrid);
+  controlsBar.appendChild(subControlsRow);
 }
 
-// Онлайн вікно
+// Онлайн модалка
 const onlineDialog = document.createElement('div');
 onlineDialog.className = 'online-dialog hidden';
 onlineDialog.id = 'onlineDialog';
@@ -449,41 +500,43 @@ function checkWinner(board) {
 }
 
 function updateTurnDisplay() {
-  [cardX, cardO, cardTie].forEach(c => c?.classList.remove('active-glow'));
+  [cardX, cardO, cardAI, cardTie].forEach(c => c?.classList.remove('active-glow'));
 
   if (state.currentPlayer === 'X') {
     cardX?.classList.add('active-glow');
   } else if (state.currentPlayer === 'O') {
     cardO?.classList.add('active-glow');
   } else if (state.currentPlayer === '▲') {
-    cardTie?.classList.add('active-glow');
+    cardAI?.classList.add('active-glow');
   }
 }
 
 function updateScoreDisplay() {
   if (scoreXEl) scoreXEl.textContent = state.score.X;
   if (scoreOEl) scoreOEl.textContent = state.score.O;
-  if (scoreTiesEl) {
-    scoreTiesEl.textContent = state.gameMode === 'trio' ? state.score.AI : state.score.ties;
-  }
+  if (scoreAIEl) scoreAIEl.textContent = state.score.AI;
+  if (scoreTiesEl) scoreTiesEl.textContent = state.score.ties; // Завжди показує нічиї!
 }
 
 function updatePlayerLabels() {
+  // Картка Нічиї завжди зберігає свій текст та іконку!
+  const tieLabel = cardTie?.querySelector('.player-label');
+  const tieIcon = cardTie?.querySelector('.player-icon');
+  if (tieLabel) tieLabel.textContent = 'Нічиї';
+  if (tieIcon) tieIcon.textContent = '🤝';
+
   if (state.gameMode === 'trio') {
+    // Вмикаємо 4 картки для режиму 2 + ШІ
+    if (scoreBoardEl) scoreBoardEl.classList.add('four-cards');
+    if (cardAI) cardAI.style.display = 'flex';
+
     if (labelXEl) labelXEl.textContent = 'Гравець 1 (X)';
     if (labelOEl) labelOEl.textContent = 'Гравець 2 (O)';
-    // Використовуємо 3-ю картку для очок ШІ
-    const tieLabel = cardTie?.querySelector('.player-label');
-    const tieIcon = cardTie?.querySelector('.player-icon');
-    if (tieLabel) tieLabel.textContent = 'ШІ (▲)';
-    if (tieIcon) tieIcon.textContent = '▲';
-    cardTie?.classList.add('player-ai');
+    if (labelAIEl) labelAIEl.textContent = 'ШІ (▲)';
   } else {
-    cardTie?.classList.remove('player-ai');
-    const tieLabel = cardTie?.querySelector('.player-label');
-    const tieIcon = cardTie?.querySelector('.player-icon');
-    if (tieLabel) tieLabel.textContent = 'Нічиї';
-    if (tieIcon) tieIcon.textContent = '🤝';
+    // 3 картки для інших режимів (картка ШІ ▲ приховується)
+    if (scoreBoardEl) scoreBoardEl.classList.remove('four-cards');
+    if (cardAI) cardAI.style.display = 'none';
 
     if (state.gameMode === 'online') {
       if (labelXEl) labelXEl.textContent = state.online.mySymbol === 'X' ? 'Ви (X)' : 'Друг (X)';
@@ -638,7 +691,7 @@ function handleCellClick(e) {
 }
 
 // ==========================================
-// ШТУЧНИЙ ІНТЕЛЕКТ ДЛЯ РЕЖИМУ ТРІО
+// ШТУЧНИЙ ІНТЕЛЕКТ ДЛЯ РЕЖИМУ ТРІО ТА 1 НА 1
 // ==========================================
 function getAvailableMoves(board) {
   const moves = [];
@@ -648,12 +701,19 @@ function getAvailableMoves(board) {
   return moves;
 }
 
-// Хід ШІ в режимі Тріо (ШІ грає за ▲ проти X та O)
 function handleTrioAiTurn() {
   if (state.isGameOver || state.currentPlayer !== '▲') return;
   const available = getAvailableMoves(state.board);
   if (available.length === 0) return;
 
+  // Легкий рівень складності ШІ
+  if (state.aiDifficulty === 'easy' && Math.random() < 0.65) {
+    const randomMove = available[Math.floor(Math.random() * available.length)];
+    makeMove(randomMove, '▲');
+    return;
+  }
+
+  // Непереможний рівень складності (або 35% шанс на легкому)
   let chosenMove = -1;
 
   // 1. Пріоритет: чи може ШІ виграти цим ходом?
@@ -681,33 +741,33 @@ function handleTrioAiTurn() {
     }
   }
 
-  // 4. Якщо загроз немає: обрати найкращу вільну позицію
+  // 4. Найкраща вільна позиція (центр або випадкова)
   if (chosenMove === -1) {
     const center = state.boardSize === 3 ? 4 : 5;
-    if (state.board[center] === null) {
-      chosenMove = center;
-    } else {
-      chosenMove = available[Math.floor(Math.random() * available.length)];
-    }
+    if (state.board[center] === null) chosenMove = center;
+    else chosenMove = available[Math.floor(Math.random() * available.length)];
   }
 
   makeMove(chosenMove, '▲');
 }
 
-// Хід ШІ 1 на 1
 function handleAiTurn() {
   if (state.isGameOver || state.currentPlayer !== 'O') return;
   const available = getAvailableMoves(state.board);
   if (available.length === 0) return;
 
+  if (state.aiDifficulty === 'easy' && Math.random() < 0.65) {
+    const randomMove = available[Math.floor(Math.random() * available.length)];
+    makeMove(randomMove, 'O');
+    return;
+  }
+
   let move = available[0];
-  // 1. Виграш
   for (const m of available) {
     state.board[m] = 'O';
     if (checkWinner(state.board)) { move = m; state.board[m] = null; makeMove(move, 'O'); return; }
     state.board[m] = null;
   }
-  // 2. Блок
   for (const m of available) {
     state.board[m] = 'X';
     if (checkWinner(state.board)) { move = m; state.board[m] = null; makeMove(move, 'O'); return; }
@@ -731,7 +791,6 @@ function showHint() {
   const player = state.currentPlayer;
   let bestMove = available[0];
 
-  // Перевірка перемоги або блокування
   for (const m of available) {
     state.board[m] = player;
     if (checkWinner(state.board)) { bestMove = m; state.board[m] = null; break; }
@@ -798,11 +857,11 @@ function setGameMode(mode) {
     hintBtn.style.display = 'inline-flex';
   } else if (mode === 'ai') {
     modeAiBtn?.classList.add('active');
-    aiDifficultySelect?.classList.remove('hidden');
+    aiDifficultySelect?.classList.remove('hidden'); // Видимий для Проти ШІ!
     hintBtn.style.display = 'inline-flex';
   } else if (mode === 'trio') {
     modeTrioBtn?.classList.add('active');
-    aiDifficultySelect?.classList.add('hidden');
+    aiDifficultySelect?.classList.remove('hidden'); // Тепер видимий і для 2 + ШІ!
     hintBtn.style.display = 'inline-flex';
   } else if (mode === 'online') {
     modeOnlineBtn?.classList.add('active');
@@ -962,7 +1021,7 @@ function initEvents() {
 function init() {
   renderBoard();
   initEvents();
-  setGameMode('trio'); // Вмикаємо новий режим за замовчуванням
+  setGameMode('trio');
 }
 
 init();
